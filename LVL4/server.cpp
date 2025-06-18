@@ -67,13 +67,14 @@ int handlemessage(string message, vector<Point>* points ){
             if (points->size() == 0){
                 cout <<"No graph exists" << endl;
             }
-            // Calculate convex hull
-            vector<Point> hull = convex_hull_graham(*points);
+            else{
+                // Calculate convex hull
+                vector<Point> hull = convex_hull_graham(*points);
 
-            // Calculate and print area
-            float area = calculate_area(hull);
-            cout << "\nConvex Hull Area: " << area << endl;
-             cout << "Please Enter a command:" << endl;
+                // Calculate and print area
+                float area = calculate_area(hull);
+                cout << "\nConvex Hull Area: " << area << endl;
+            }
         }
         else if (cmd == "Newpoint"){
             
@@ -84,25 +85,30 @@ int handlemessage(string message, vector<Point>* points ){
             auto it = find(points->begin(),points->end(),p);
             if (it == points->end()){
                 points->push_back(p);
+                cout <<"Point added successfuly!" << endl;
             }else{
                 cout <<"Point is already exists!" << endl;
             }
-        cout << "Please Enter a command:" << endl;
         }
         else if(cmd == "Removepoint"){
-
-            string rm_coordiantes;
-            ss >> rm_coordiantes;
-            Point p = parse_point(rm_coordiantes);
-            auto it = find(points->begin(),points->end(),p);
-            if (it != points->end()){
-                points->erase(it);
+            if (points->size() == 0){
+                cout <<"No Points to remove" << endl;
             }
-            else
-                cout << "Could not Remove a non-existing Point" << endl;
-         cout << "Please Enter a command:" << endl;
+            else{
+                string rm_coordiantes;
+                ss >> rm_coordiantes;
+                Point p = parse_point(rm_coordiantes);
+                auto it = find(points->begin(),points->end(),p);
+                if (it != points->end()){
+                    points->erase(it);
+                    cout <<"Point removed successfuly!" << endl;
+                }
+                else
+                    cout << "Could not Remove a non-existing Point" << endl;
+            }
         }
-        else if (cmd != "Removepoint" || cmd != "Newpoint" || cmd != "Newgraph" || cmd != "CH" ){
+        else if (cmd != "Removepoint" && cmd != "Newpoint" && cmd != "Newgraph" && cmd != "CH" ){
+                cout << message << endl;
                 cout <<"Wrong command!" << endl;
         }
     }
@@ -309,6 +315,7 @@ void handle_client_data(int s, int listener, fd_set *master,
         close(s); // bye!
         FD_CLR(s, master); // remove from master set
     } else {
+        buf[nbytes] = '\0';
         // we got some data from a client
         printf("message recieved from %d\n",s);
         handlemessage(buf,&points);

@@ -143,8 +143,8 @@ int main(int argc, char* argv[]) {
 
             if (send(sockfd, input.c_str(), input.length(), 0) == -1) {
                 perror("send");
+                }
             }
-        }
         }
 
         // Incoming message from server
