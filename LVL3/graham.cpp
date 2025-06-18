@@ -19,6 +19,8 @@ int cross(const Point& O, const Point& A, const Point& B);
 vector<Point> convex_hull_graham(vector<Point> points);
 float calculate_area(const vector<Point>& hull);
 
+
+
 Point parse_point(const string& s){
     size_t comma_pos = s.find(",");
     if (comma_pos == string::npos){
