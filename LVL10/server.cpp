@@ -29,10 +29,14 @@ using namespace std;
 // for better readability
 typedef pair<float, float> Point;
 vector<Point> points; // points storage as (X,Y)
-bool is_graph; // to know if we already has a graph
 
 // threads
 pthread_mutex_t graph_mutex = PTHREAD_MUTEX_INITIALIZER; //sets the lock to default state
+
+// LVL10 threads:
+pthread_cond_t area_condition = PTHREAD_COND_INITIALIZER; // to stay in "wait mode" until CH reaches to CH >= 100
+pthread_mutex_t area_mutex = PTHREAD_MUTEX_INITIALIZER; // thread lock for area mutex, to prevent race conditions.
+bool area_above_100 = false; // to know if we are above 100 and status has change.
 
 float cross(const Point& O, const Point& A, const Point& B);
 vector<Point> convex_hull_graham(vector<Point> points);
@@ -58,6 +62,7 @@ int handlemessage(string message, vector<Point>* points ){
         string pair_str;
         // ifelse kaele veharim
         if (cmd == "Newgraph"){
+            points->clear();
             while (getline(ss, pair_str, ';')) {
                 size_t comma_pos = pair_str.find(',');
                 if (comma_pos != string::npos) {
@@ -79,6 +84,15 @@ int handlemessage(string message, vector<Point>* points ){
                 // Calculate and print area
                 float area = calculate_area(hull);
                 cout << "\nConvex Hull Area: " << area << endl;
+                pthread_mutex_lock(&area_mutex);
+
+                if ((area >= 100) != area_above_100){
+                    area_above_100 = (area >= 100);
+                    pthread_cond_signal(&area_condition);
+                } 
+                
+                pthread_mutex_unlock(&area_mutex);
+
             }
         }
         else if (cmd == "Newpoint"){
@@ -299,11 +313,49 @@ void* handle_client_thread(int sockfd){ // arg is an int pointer that contains t
     return nullptr;
 }
 
+void* areaWatcher(void* args){
+    bool last_status = false; // if above 100 - false , else true.
+
+    while (true){
+        pthread_mutex_lock(&area_mutex);
+
+        while (area_above_100 == last_status)
+        {
+            pthread_cond_wait(&area_condition, &area_mutex); // sleeps until codition change , when waking up release mutex.
+        }
+
+        //here we start the >= 100 check
+
+        if (area_above_100 && !last_status){
+            printf("At least 100 units belongs to CH\n");            
+            last_status = true;
+        }
+        else if(!area_above_100 && last_status){
+            printf("At least 100 units no longer belongs to CH\n");
+            last_status = false;
+        }
+
+        pthread_mutex_unlock(&area_mutex);
+
+        
+    }
+    return nullptr;
+}
+
+
 /*
  * Main
  */
 int main(void)
 {
+    // condition thread:
+    pthread_t area_thread;
+    if(pthread_create(&area_thread, nullptr, areaWatcher, nullptr) != 0){
+        perror("Failed to create monitor thread");
+        exit(1);
+    }
+    pthread_detach(area_thread);
+
     int listener;     // listening socket descriptor
     listener = get_listener_socket();
     printf("Server is listening on port %s...\n", PORT);

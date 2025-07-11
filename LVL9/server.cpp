@@ -58,6 +58,7 @@ int handlemessage(string message, vector<Point>* points ){
         string pair_str;
         // ifelse kaele veharim
         if (cmd == "Newgraph"){
+            points->clear();
             while (getline(ss, pair_str, ';')) {
                 size_t comma_pos = pair_str.find(',');
                 if (comma_pos != string::npos) {
