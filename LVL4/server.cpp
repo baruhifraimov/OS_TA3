@@ -29,7 +29,7 @@ vector<Point> points; // points storage as (X,Y)
 bool is_graph; // to know if we already has a graph
 
 
-int cross(const Point& O, const Point& A, const Point& B);
+float cross(const Point& O, const Point& A, const Point& B);
 vector<Point> convex_hull_graham(vector<Point> points);
 float calculate_area(const vector<Point>& hull);
 
@@ -117,33 +117,55 @@ int handlemessage(string message, vector<Point>* points ){
 }
 
 
-int cross(const Point& O, const Point& A, const Point& B) {
+
+float cross(const Point& O, const Point& A, const Point& B) {
     return (A.first - O.first) * (B.second - O.second) -
            (A.second - O.second) * (B.first - O.first);
 }
 
-// calculates the convex points using Graham Scan
-vector<Point> convex_hull_graham(vector<Point> points) {
-    if (points.size() <= 3) return points;
-
-    Point pivot = *min_element(points.begin(), points.end(), [](const Point& a, const Point& b) {
-        return a.second < b.second || (a.second == b.second && a.first < b.first);
-    });
-
-    sort(points.begin(), points.end(), [&pivot](const Point& a, const Point& b) {
-        int c = cross(pivot, a, b);
-        if (c == 0)
-            return hypot(pivot.first - a.first, pivot.second - a.second)
-                 < hypot(pivot.first - b.first, pivot.second - b.second);
-        return c > 0;
-    });
-
+vector<Point> convex_hull_graham(vector<Point> input_points) {
+    if (input_points.size() <= 1) return input_points;
+    
+    // Remove duplicates
+    sort(input_points.begin(), input_points.end());
+    input_points.erase(unique(input_points.begin(), input_points.end()), input_points.end());
+    
+    if (input_points.size() <= 2) return input_points;
+    
+    // Find pivot (bottommost point, leftmost if tie)
+    auto pivot_it = min_element(input_points.begin(), input_points.end(), 
+        [](const Point& a, const Point& b) {
+            return a.second < b.second || (a.second == b.second && a.first < b.first);
+        });
+    
+    Point pivot = *pivot_it;
+    
+    // Move pivot to front
+    swap(*input_points.begin(), *pivot_it);
+    
+    // Sort remaining points by polar angle with respect to pivot
+    sort(input_points.begin() + 1, input_points.end(), 
+        [&pivot](const Point& a, const Point& b) {
+            float c = cross(pivot, a, b);
+            if (abs(c) < 1e-9) { // Handle collinear points
+                // If collinear, sort by distance from pivot
+                float dist_a = hypot(pivot.first - a.first, pivot.second - a.second);
+                float dist_b = hypot(pivot.first - b.first, pivot.second - b.second);
+                return dist_a < dist_b;
+            }
+            return c > 0;
+        });
+    
+    // Build convex hull
     vector<Point> hull;
-    for (const auto& p : points) {
-        while (hull.size() >= 2 && cross(hull[hull.size()-2], hull[hull.size()-1], p) <= 0)
+    for (const auto& p : input_points) {
+        // Remove points that create right turn
+        while (hull.size() >= 2 && cross(hull[hull.size()-2], hull[hull.size()-1], p) < 0) {
             hull.pop_back();
+        }
         hull.push_back(p);
     }
+    
     return hull;
 }
 
