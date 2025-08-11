@@ -54,7 +54,8 @@ int main(){
                 Point p = parse_point(xy);
                 points.push_back(p);
             }
-             cout << "Please Enter a command:" << endl;
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Please Enter a command:" << endl;
             continue;
 
         }
